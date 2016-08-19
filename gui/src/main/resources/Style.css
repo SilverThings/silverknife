@@ -1,0 +1,100 @@
+.root {
+    -fx-background-color: white;
+    -fx-font-size: 12pt;
+}
+
+.button {
+    -fx-background-color: white;
+    -fx-background-radius: 0;
+    -fx-text-fill: #03A9F4;
+    -fx-border-color: #00000000;
+}
+
+.button:pressed {
+    -fx-background-color: #03A9F4;
+    -fx-background-radius: 0;
+    -fx-text-fill: white;
+}
+
+.button:focused {
+	-fx-background-color: white;
+    -fx-background-radius: 0;
+    -fx-text-fill: #03A9F4;
+    -fx-border-color: #03A9F4;
+}
+
+.button:hover {
+	-fx-background-color: #03A9F4;
+	-fx-background-radius: 0;
+	-fx-text-fill: white;
+}
+
+.button:disabled {
+	-fx-text-fill: grey;
+	-fx-opacity: 0.6;
+}
+
+.combo-box-base {
+	-fx-background-color: white, white;
+	-fx-border-color: #03A9F4;
+	-fx-font-size: 10pt;
+}
+
+.combo-box .list-cell {
+	-fx-text-fill: #03A9F4;
+}
+
+.combo-box .list-cell:hover {
+	-fx-background-color: #03A9F4;
+	-fx-text-fill: white;
+}
+
+.combo-box .list-cell:selected {
+	-fx-background-color: white;
+	-fx-text-fill: #03A9F4;
+}
+
+.combo-box .list-cell:selected:hover {
+	-fx-background-color: #03A9F4;
+	-fx-text-fill: white;
+}
+
+.combo-box-base:showing {
+    -fx-color: #03A9F4;
+}
+
+.combo-box-base:disabled {
+	-fx-border-color: #9E9E9E;
+	-fx-text-fill: black;
+}
+
+.combo-box .list-cell:selected:disabled {
+	-fx-background-color: white;
+	-fx-text-fill: black;
+}
+
+.check-box{
+	-fx-font-family: "Segoe UI Light";
+	-fx-font-size: 18;
+	-fx-text-fill: black;
+}
+
+.check-box .box{
+	-fx-outer-border: #03A9F4;
+	-fx-body-color: white;
+	-fx-background-color:
+   	-fx-outer-border,
+   	-fx-body-color;
+	-fx-background-insets: 0, 1;
+	-fx-background-radius: 2px, 0px;
+}
+
+.check-box .mark {
+	-fx-shape:"M14.596,2.055L12.455,0C9.687,2.884,6.011,6.714,5.158,7.602L2.055,4.624L0,6.765l5.242,5.037l0.003-0.004l0.003,0.004L14.596,2.055z";
+	-fx-scale-x: 1.4;
+    -fx-scale-y: 1.4;
+}
+
+.check-box:selected .mark {
+	-fx-background-color: #0181e2;
+}

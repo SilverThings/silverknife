@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.StackPane?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.layout.HBox?>
+<BorderPane prefHeight="500" fx:controller="controllers.HelpDialogController" xmlns:fx="http://javafx.com/fxml">
+    <top>
+        <StackPane prefWidth="1600"/>
+    </top>
+    <bottom>
+        <HBox>
+            <StackPane prefWidth="800"/>
+            <Button text="OK" onAction="#dismissDialog" alignment="CENTER"/>
+        </HBox>
+    </bottom>
+</BorderPane>

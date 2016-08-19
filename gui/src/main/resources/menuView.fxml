@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.collections.*?>
+<?import java.lang.String?>
+
+<HBox fx:controller="controllers.MenuViewController" xmlns:fx="http://javafx.com/fxml">
+    <StackPane prefWidth="15"/>
+    <VBox>
+        <Label text="Embedded system IP"/>
+        <TextField fx:id="ipAddressTextField" prefWidth="240" onKeyReleased="#changeIp" promptText="IP address"/>
+        <StackPane prefHeight="10"/>
+        <ComboBox fx:id="embeddedTypeComboBox" prefWidth="240" promptText="Select embedded type" onHidden="#setButtonsEnabled">
+            <items>
+                <FXCollections fx:factory="observableArrayList">
+                    <String fx:value="Raspberry Pi 2"/>
+                    <String fx:value="BeagleBone Black"/>
+                    <String fx:value="CubieBoard"/>
+                </FXCollections>
+            </items>
+        </ComboBox>
+        <HBox>
+            <Button fx:id="connectButton" text="Connect" onAction="#connect" disable="true"/>
+            <Button fx:id="disconnectButton" text="Disconnect" disable="true" onAction="#disconnect"/>
+            <Button fx:id="addButton" text="Add" onAction="#add" disable="true"/>
+        </HBox>
+        <StackPane prefHeight="40"/>
+        <Label text="Available systems"/>
+        <ComboBox fx:id="embeddedListComboBox" prefWidth="240" promptText="Select system to load" onMouseClicked="#loadAvailableSystems" onHidden="#selectAvailableSystem"/>
+        <Button text="Delete all configurations" onAction="#deleteAll"/>
+        <StackPane prefHeight="50"/>
+        <CheckBox fx:id="embeddedLayoutCheckBox" text="Show embedded layout" disable="true" onAction="#toggleLayoutVisible"/>
+        <CheckBox fx:id="pinRequestCheckBox" text="Request pin status" disable="true" onAction="#toggleRequestPinStatus"/>
+        <StackPane prefHeight="50"/>
+        <Label text="Pin status refresh (ms)"/>
+        <HBox>
+            <TextField fx:id="refreshRateTextField" text="1000" prefWidth="165" disable="true" onKeyReleased="#validateAndChangeRefreshRate"/>
+            <Button fx:id="updateRefreshRateButton" text="Update" disable="true" onAction="#changeRefreshRate"/>
+        </HBox>
+        <StackPane prefHeight="50"/>
+        <HBox>
+            <VBox>
+                <StackPane prefHeight="7"/>
+                <Label text="Macro" textAlignment="CENTER"/>
+            </VBox>
+            <StackPane prefWidth="90"/>
+            <Button text="Need help?" onAction="#showHelp"/>
+        </HBox>
+        <ComboBox fx:id="textAreaComboBox" prefWidth="240" onHidden="#validateTextArea"/>
+        <StackPane prefHeight="5"/>
+        <TextField fx:id="addressTextField" promptText="Physical address (without 0x)" prefWidth="240" onKeyReleased="#validatePhysicalAddress"/>
+        <StackPane prefHeight="1"/>
+        <TextArea fx:id="messagesTextArea" prefRowCount="12" prefWidth="240" onKeyReleased="#validateTextArea"/>
+        <Button fx:id="sendButton" text="Send" onAction="#sendTextAreaMessage" disable="true"/>
+    </VBox>
+    <StackPane prefWidth="15"/>
+</HBox>

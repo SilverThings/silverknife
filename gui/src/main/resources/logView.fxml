@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.control.Button?>
+
+<VBox fx:controller="controllers.LogViewController" xmlns:fx="http://javafx.com/fxml">
+    <Button text="Clear Log" onAction="#clearLog"/>
+    <HBox>
+        <TextArea fx:id="logTextArea" prefWidth="350" editable="false" wrapText="true" prefHeight="950"/>
+        <StackPane prefWidth="15"/>
+    </HBox>
+</VBox>
