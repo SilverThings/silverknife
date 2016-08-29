@@ -8,6 +8,7 @@ public class RequestParser {
 	private String hour;
 	private String minute;
 	private String second;
+	private String ioType;
 	private String pinType;
 	private String pinNumber;
 	private String value;
@@ -20,7 +21,8 @@ public class RequestParser {
 		hour = splitString[0].substring(8, 10);
 		minute = splitString[0].substring(10, 12);
 		second = splitString[0].substring(12, 14);
-		pinType = splitString[0].substring(14);
+		ioType = splitString[0].substring(14, 15);
+		pinType = splitString[0].substring(15);
 		pinNumber = splitString[1].substring(0, 2);
 		value = splitString[1].substring(2);
 	}
@@ -47,6 +49,10 @@ public class RequestParser {
 
 	public String getSecond() {
 		return second;
+	}
+
+	public String getIoType() {
+		return ioType;
 	}
 
 	public String getPinType() {

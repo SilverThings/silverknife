@@ -1,39 +1,40 @@
 package managers;
 
+import io.silverspoon.bulldog.core.gpio.DigitalInput;
 import io.silverspoon.bulldog.core.gpio.DigitalOutput;
 import io.silverspoon.bulldog.core.platform.Board;
 
 public class GpioManager {
 
-	public void turnLedOn(Board board, String pin) throws NullPointerException{
-		if (pin.startsWith("0")) {
-			pin.substring(1);
-		}
-		DigitalOutput output = board.getPin(pin).as(DigitalOutput.class);
-		if (output.isLow()) {
-			output.high();
-		}
-	}
+    public int turnLedOn(Board board, String pin) throws NullPointerException {
+        DigitalOutput output = board.getPin(pin).as(DigitalOutput.class);
+        output.high();
+        return 1;
+    }
 
-	public void turnLedOff(Board board, String pin) throws NullPointerException{
-		if (pin.startsWith("0")) {
-			pin.substring(1);
-		}
-		DigitalOutput output = board.getPin(pin).as(DigitalOutput.class);
-		if (output.isHigh()) {
-			output.low();
-		}
-	}
+    public int turnLedOff(Board board, String pin) throws NullPointerException {
+        DigitalOutput output = board.getPin(pin).as(DigitalOutput.class);
+        output.low();
+        return 0;
+    }
 
-	public void toggleLed(Board board, String pin) throws NullPointerException{
-		if (pin.startsWith("0")) {
-			pin.substring(1);
-		}
-		DigitalOutput output = board.getPin(pin).as(DigitalOutput.class);
-		if (output.isLow()) {
-			output.high();
-		} else {
-			output.low();
-		}
-	}
+    public int toggleLed(Board board, String pin) throws NullPointerException {
+        DigitalOutput output = board.getPin(pin).as(DigitalOutput.class);
+        if (output.isLow()) {
+            output.high();
+            return 1;
+        } else {
+            output.low();
+            return 0;
+        }
+    }
+
+    public int getInputValue(Board board, String pin) {
+        DigitalInput digitalInput = board.getPin(pin).as(DigitalInput.class);
+        if (digitalInput.read().getBooleanValue()) {
+            return 1;
+        } else {
+            return 0;
+        }
+    }
 }

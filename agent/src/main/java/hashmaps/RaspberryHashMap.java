@@ -67,6 +67,6 @@ public class RaspberryHashMap {
 	}
 
 	public String[] getValueByKey(int key) {
-		return (String[]) hashMap.get(key);
+		return hashMap.get(key);
 	}
 }
