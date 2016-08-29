@@ -3,6 +3,8 @@ package core.networking;
 import core.Logger;
 import core.Pin;
 import core.Validations;
+import javafx.application.Platform;
+import layouts.EmbeddedLayout;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -12,14 +14,16 @@ import java.util.concurrent.Callable;
 
 class SendMacro implements Callable<NetworkingParams> {
 
-    private String address;
+    private EmbeddedLayout pinCallback;
+    private PopupDismiss popupCallback;
     private List<String> commands;
     private NetworkingParams params;
     private Logger logger;
     private Validations validations;
 
-    SendMacro(NetworkingParams params, Logger logger, String address, List<String> commands) {
-        this.address = address;
+    SendMacro(EmbeddedLayout pinCallback, PopupDismiss popupCallback, NetworkingParams params, Logger logger, List<String> commands) {
+        this.pinCallback = pinCallback;
+        this.popupCallback = popupCallback;
         this.commands = commands;
         this.params = params;
         this.logger = logger;
@@ -30,45 +34,60 @@ class SendMacro implements Callable<NetworkingParams> {
     public NetworkingParams call() throws Exception {
         for (String command : commands) {
             command = command.substring(0, command.lastIndexOf(";"));
-            logger.log("Sending: " + command);
-            sendMacroCommand(address, command);
+            String finalCommand = command;
+            Platform.runLater(() -> logger.log("Sending: " + finalCommand));
+            sendMacroCommand(command);
         }
-        logger.log("Macro sent.");
+        Platform.runLater(() -> logger.log("Macro sent."));
+        Platform.runLater(() -> popupCallback.dismissPopup());
         return params;
     }
 
-    private void sendMacroCommand(String address, String command) throws Exception {
+    private void sendMacroCommand(String command) throws Exception {
         if (validations.isOnlyDigitString(command)) {
-//            sleepThread(connectionService, Integer.valueOf(command));
             Thread.sleep(Integer.valueOf(command));
             return;
         }
 
         NetworkingParams networkingParams;
         int pinId;
+        String address;
         String hexaCommand;
 
         if (command.startsWith("GPIO")) {
             pinId = Integer.valueOf(command.substring(5, 7));
             Pin pin = new Pin(pinId, "O", "GPIO");
-            networkingParams = new ToggleGpioPin(getDateAndTime(), params, logger, pin).call();
+            String pinValue;
+            if (command.substring(command.length() - 1).equals("1")) {
+                pinValue = "1";
+                pin.setValue(true);
+            } else if (command.substring(command.length() - 1).equals("0")) {
+                pinValue = "0";
+                pin.setValue(false);
+            } else {
+                //Something went wrong. Setting no value. Server handles no value on GPIO pin as toggle. (TextArea validation should not allow this line)
+                pinValue = "";
+            }
+            networkingParams = new ToggleGpioPin(pinCallback, getDateAndTime(), params, logger, pin, pinValue).call();
         } else if (command.startsWith("I2C")) {
-            pinId = Integer.valueOf(command.substring(4, 6));
-            hexaCommand = command.substring(6);
+            address = command.substring(4, 6);
+            pinId = Integer.valueOf(command.substring(6, 8));
+            hexaCommand = command.substring(8);
             Pin pin = new Pin(pinId, "O", "I2C");
             networkingParams = new SendValueToI2CPin(getDateAndTime(), params, logger, pin, address, hexaCommand).call();
         } else if (command.startsWith("SPI")) {
-            pinId = Integer.valueOf(command.substring(4, 6));
-            hexaCommand = command.substring(6);
+            address = command.substring(4, 6);
+            pinId = Integer.valueOf(command.substring(6, 8));
+            hexaCommand = command.substring(8);
             Pin pin = new Pin(pinId, "O", "SPI");
             networkingParams = new SendValueToSpiPin(getDateAndTime(), params, logger, pin, address, hexaCommand).call();
         } else {
-            logger.log("Not supported command in macro.");
+            Platform.runLater(() -> logger.log("Not supported command in macro."));
             return;
         }
 
         if (networkingParams != null) {
-            logger.log(networkingParams.message);
+            Platform.runLater(() -> logger.log(networkingParams.message));
         }
     }
 

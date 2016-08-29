@@ -8,8 +8,7 @@ import java.util.concurrent.Callable;
 class Disconnect implements Callable<NetworkingParams> {
 
     private final static String DISCONNECT_COMMAND = "Disconnect";
-    // TODO: 28.7.2016 zmenit najprv na serveri potom tu
-    private final static String DISCONNECT_RESPONSE = "disconnected from server.";
+    private final static String DISCONNECT_RESPONSE = "Server notified about client disconnect attempt.";
     private final static String ATTEMPTING_DISCONNECT = "Trying to disconnect from server.";
     private final static String CONNECTION_SUCCESSFULLY_CLOSED = "Connection successfully closed.";
     private final static String CONNECTION_ALREADY_CLOSED = "Connection is already closed.";
@@ -29,11 +28,9 @@ class Disconnect implements Callable<NetworkingParams> {
             if (params != null) {
                 if (params.connected) {
                     params.out.println(DISCONNECT_COMMAND);
-                    params.message = params.in.readLine();
-                    if (params.message.equals(DISCONNECT_RESPONSE)) {
+                    if (params.in.readLine().equals(DISCONNECT_RESPONSE)) {
                         disconnect();
                     }
-                    return params;
                 } else {
                     return null;
                 }
@@ -43,7 +40,8 @@ class Disconnect implements Callable<NetworkingParams> {
         } catch (IOException e) {
             logger.log(e.toString());
         }
-        return null;
+        params.connected = false;
+        return params;
     }
 
     private void disconnect() {
@@ -60,7 +58,6 @@ class Disconnect implements Callable<NetworkingParams> {
             } else {
                 logger.log(CONNECTION_ALREADY_CLOSED);
             }
-            params.connected = false;
         }
     }
 }

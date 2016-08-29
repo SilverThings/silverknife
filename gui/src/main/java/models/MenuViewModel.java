@@ -17,7 +17,7 @@ public class MenuViewModel {
     private final static String FILE_NOT_FOUND = "File not found.";
     private final static String CREATING_NEW_FILE = "File with embedded system configurations could not be found. Creating new file.";
     private final static String ACCESS_DENIED = "Access to file denied. Check your security settings.";
-    private final static String FILE_CORRUPTED = "File seems to be corrupted. Cannot load saved configurations.";
+    private final static String FILE_CORRUPTED = "File seems to be corrupted. Cannot load saved configurations. If you want to avoid data being lost, check for file " + EMBEDDED_LIST_FILE + ". Otherwise, you can create valid file by deleting all configuration and then adding new configuration.";
     private final static String FILE_CONFIGURATION_DELETED = "File configuration deleted.";
     private final static String FILE_CONFIGURATION_ADDED = "Added new configuration to file.";
 
@@ -51,7 +51,7 @@ public class MenuViewModel {
                 logger.log(FILE_CONFIGURATION_DELETED);
             }
         } else {
-            alerts.createErrorAlert(null, FILE_NOT_FOUND);
+            logger.log(FILE_NOT_FOUND);
         }
     }
 
@@ -60,7 +60,7 @@ public class MenuViewModel {
             return file;
         } else {
             if (file.createNewFile()) {
-                alerts.createInfoAlert(null, CREATING_NEW_FILE);
+                logger.log(CREATING_NEW_FILE);
                 return file;
             } else {
                 alerts.createWarningAlert(null, ACCESS_DENIED);

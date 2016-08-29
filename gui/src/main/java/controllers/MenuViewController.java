@@ -1,13 +1,20 @@
 package controllers;
 
 import core.*;
+import core.networking.DisconnectCallback;
 import core.networking.Networking;
+import core.networking.PopupDismiss;
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.GridPane;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
+import javafx.stage.StageStyle;
 import layouts.EmbeddedLayout;
 import models.MenuViewModel;
 
@@ -16,7 +23,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class MenuViewController {
+public class MenuViewController implements PopupDismiss, DisconnectCallback {
 
     private final static String RPI_IMAGE = "-fx-background-image: url(\"/RPI_layout.jpg\");-fx-background-repeat: no-repeat;-fx-background-position: bottom left";
     private final static String BBB_IMAGE = "-fx-background-image: url(\"/BBB_layout.jpg\");-fx-background-repeat: no-repeat;-fx-background-position: bottom left";
@@ -24,8 +31,7 @@ public class MenuViewController {
     private final static String NO_IMAGE = "";
     private final static String WRONG_IP_FORMAT = "Wrong IP address format";
     private final static String NO_EMBEDDED_CHOSEN = "Choose embedded type before saving.";
-    private final static String NO_FILE_AVAILABLE = "Cannot load file with system configuration. Create new file by adding system configuration.";
-    private final static String DEFAULT_SYSTEM_TYPE = "Cannot process system type. Select from available options.";
+    private final static String NO_FILE_AVAILABLE = "No embedded configuration is set. Add system configuration before being able to load any.";
     private final static String DEFAULT_AVAILABLE_SYSTEM = "Selected layout is already visible or no layout was chosen.";
     private final static String SEND_I2C_BY_BUTTON = "Send I2C by clicking on appropriate button in layout.";
     private final static String SEND_SPI_BY_BUTTON = "Send SPI by clicking on appropriate button in layout.";
@@ -35,6 +41,8 @@ public class MenuViewController {
     public final static String OBSERVABLE_SPI_TEXT = "SPI Message";
 
     private Root root;
+
+    private Stage stage;
 
     private MenuViewModel menuViewModel;
     private AlertsImpl alerts;
@@ -46,6 +54,7 @@ public class MenuViewController {
     private Networking networking;
     private Logger logger;
     private int refreshRate = -1;
+
     @FXML
     private TextField ipAddressTextField;
 
@@ -120,56 +129,75 @@ public class MenuViewController {
 
     @FXML
     private void connect(ActionEvent event) throws IOException {
-        connectButton.setDisable(true);
-        disconnectButton.setDisable(false);
-        ipAddressTextField.setDisable(true);
-        embeddedTypeComboBox.setDisable(true);
-        embeddedLayoutCheckBox.setDisable(false);
-        pinRequestCheckBox.setDisable(false);
-        refreshRateTextField.setDisable(false);
-//        pinRequestButton.setDisable(false);
-        disconnectButton.requestFocus();
         if (event == null) {
-            // TODO: 18.8.2016 NETWORK_OP
-            // TODO: 19.8.2016 mozno popup 
-//            boolean connected = networking.connect(selectedSystemIpFromComboBox);
-//            if (connected) {
-            root.showEmbeddedLayout(selectedSystemTypeFromComboBox);
-            logger.log(selectedSystemTypeFromComboBox + " layout loaded.");
-//            }
+            if (networking.connect(this, selectedSystemIpFromComboBox)) {
+                root.showEmbeddedLayout(selectedSystemTypeFromComboBox);
+                logger.log(selectedSystemTypeFromComboBox + " layout loaded.");
+                setButtonsAfterConnect();
+            }
         } else {
             String ipAddress = ipAddressTextField.getText();
             if (validations.isIpAddress(ipAddress)) {
-                // TODO: 18.8.2016 NETWORK_OP
-//                boolean connected = networking.connect(ipAddress);
-//                if (connected) {
-                root.showEmbeddedLayout(selectedSystemTypeFromButton);
-                logger.log(selectedSystemTypeFromButton + " layout loaded.");
-//                }
+                if (networking.connect(this, ipAddress)) {
+                    root.showEmbeddedLayout(selectedSystemTypeFromButton);
+                    logger.log(selectedSystemTypeFromButton + " layout loaded.");
+                    setButtonsAfterConnect();
+                }
             }
         }
     }
 
     @FXML
     private void disconnect() {
+        boolean connected = networking.disconnect();
+        if (!connected) {
+            setButtonsAfterDisconnect();
+            root.removeEmbeddedLayout();
+        }
+    }
+
+    private void setButtonsAfterConnect() {
+        ipAddressTextField.setDisable(true);
+        embeddedTypeComboBox.setDisable(true);
+        connectButton.setDisable(true);
+        disconnectButton.setDisable(false);
+        addButton.setDisable(true);
+        embeddedLayoutCheckBox.setDisable(false);
+        pinRequestCheckBox.setDisable(false);
+        refreshRateTextField.setDisable(false);
+        if (textAreaComboBox.getSelectionModel().getSelectedIndex() == 0) {
+            addressTextField.setText("");
+            validations.setAddressValidationBorder("", addressTextField);
+            addressTextField.setDisable(true);
+        } else {
+            addressTextField.setDisable(false);
+        }
+        messagesTextArea.setDisable(false);
+        messagesTextArea.requestFocus();
+        sendButton.setDisable(false);
+    }
+
+    private void setButtonsAfterDisconnect() {
+        ipAddressTextField.setDisable(false);
+        embeddedTypeComboBox.setDisable(false);
         if (validations.isIpAddress(ipAddressTextField.getText())) {
             connectButton.setDisable(false);
             connectButton.requestFocus();
         }
+        disconnectButton.setDisable(true);
+        setButtonsEnabled();
+        embeddedLayoutCheckBox.setSelected(false);
         embeddedLayoutCheckBox.setDisable(true);
         pinRequestCheckBox.setDisable(true);
         refreshRateTextField.setDisable(true);
         updateRefreshRateButton.setDisable(true);
-        embeddedTypeComboBox.setDisable(false);
-        ipAddressTextField.setDisable(false);
-        disconnectButton.setDisable(true);
-        embeddedLayoutCheckBox.setSelected(false);
+        addressTextField.setDisable(true);
+        messagesTextArea.setDisable(true);
+        sendButton.setDisable(true);
         if (pinRequestCheckBox.isSelected()) {
             pinRequestCheckBox.setSelected(false);
             toggleRequestPinStatus();
         }
-        root.removeEmbeddedLayout();
-        networking.disconnect();
     }
 
     @FXML
@@ -200,7 +228,7 @@ public class MenuViewController {
                 menuViewModel.readFileContent(false);
             }
         } catch (IOException e) {
-            alerts.createErrorAlert(null, NO_FILE_AVAILABLE);
+            alerts.createInfoAlert(null, NO_FILE_AVAILABLE);
             logger.log(NO_FILE_AVAILABLE);
         }
         ArrayList<String> embeddedList = menuViewModel.getEmbeddedSystems();
@@ -250,8 +278,7 @@ public class MenuViewController {
             validateAndChangeRefreshRate();
             List<Pin> pins = root.getCheckedPins();
             EmbeddedLayout callback = root.getRequestStatusCallback();
-            networking.startRequestPinStatus(callback, refreshRate, pins);
-            // TODO: 16.8.2016 from eclipse method setUiFromResponse (include in new Thread task if networking method below does not do it)
+            networking.startRequestPinStatus(this, callback, refreshRate, pins);
         } else {
             refreshRateTextField.setDisable(true);
             updateRefreshRateButton.setDisable(true);
@@ -277,7 +304,7 @@ public class MenuViewController {
     private void changeRefreshRate() {
         String refreshRate = refreshRateTextField.getText();
         EmbeddedLayout callback = root.getRequestStatusCallback();
-        networking.updateRequestRefreshRate(callback, Integer.valueOf(refreshRate));
+        networking.updateRequestRefreshRate(this, callback, Integer.valueOf(refreshRate));
         logger.log("Refresh rate updated to " + refreshRate);
     }
 
@@ -305,8 +332,6 @@ public class MenuViewController {
 
         if (selectedSystemType != null && !selectedSystemType.isEmpty()) {
             this.selectedSystemTypeFromButton = selectedSystemType;
-        } else {
-            logger.log(DEFAULT_SYSTEM_TYPE);
         }
     }
 
@@ -334,7 +359,7 @@ public class MenuViewController {
     @FXML
     public void validatePhysicalAddress() {
         String addressText = addressTextField.getText();
-        if (addressTextField.getText() == null || addressTextField.getText().isEmpty()) {
+        if (addressTextField.getText() == null) {
             return;
         }
         validations.setAddressValidationBorder(addressText, addressTextField);
@@ -343,6 +368,14 @@ public class MenuViewController {
     @FXML
     private void validateTextArea() {
         int textAreaSelectedItem = textAreaComboBox.getSelectionModel().getSelectedIndex();
+        if (textAreaSelectedItem == 0) {
+            addressTextField.setText("");
+            validations.setAddressValidationBorder("", addressTextField);
+            addressTextField.setDisable(true);
+        } else {
+            addressTextField.setDisable(false);
+        }
+
         String textAreaText = messagesTextArea.getText();
 
         validations.setTextAreaValidationBorder(messagesTextArea, textAreaSelectedItem);
@@ -356,12 +389,7 @@ public class MenuViewController {
 
     @FXML
     private void sendTextAreaMessage() {
-        String address = addressTextField.getText();
         String textAreaText = messagesTextArea.getText();
-        boolean validateAddress = false;
-        if (textAreaText.contains("I2C") || textAreaText.contains("SPI")) {
-            validateAddress = true;
-        }
         switch (textAreaComboBox.getSelectionModel().getSelectedItem()) {
             case OBSERVABLE_MACRO_TEXT:
                 List<String> commands = Arrays.asList(textAreaText.split("\n"));
@@ -369,15 +397,9 @@ public class MenuViewController {
                     logger.log("Commands are not valid");
                     return;
                 }
-                if (validateAddress) {
-                    if (!validations.isPhysicalAddressValid(address)) {
-                        logger.log("Address is not valid");
-                        return;
-                    }
-                }
-                // TODO: 18.8.2016  vyvolaj popup
-                networking.sendMacro(address, commands);
-                // TODO: 18.8.2016 zavri popup
+                createMacroPopup();
+                EmbeddedLayout callback = root.getRequestStatusCallback();
+                networking.sendMacro(callback, this, commands);
                 break;
             case OBSERVABLE_I2C_TEXT:
                 logger.log(SEND_I2C_BY_BUTTON);
@@ -388,6 +410,24 @@ public class MenuViewController {
                 alerts.createInfoAlert(null, SEND_SPI_BY_BUTTON);
                 break;
         }
+    }
+
+    private void createMacroPopup() {
+        Label label = new Label(" Sending macro... ");
+        label.setStyle("-fx-background-color: #03A9F4;-fx-text-fill: white;-fx-font-size: 60pt;");
+        Scene scene = new Scene(label);
+
+        stage = new Stage();
+        stage.initStyle(StageStyle.UNDECORATED);
+        stage.initModality(Modality.WINDOW_MODAL);
+        stage.initOwner(root.getRootLayout().getScene().getWindow());
+        stage.setScene(scene);
+        stage.show();
+    }
+
+    @Override
+    public void dismissPopup() {
+        stage.close();
     }
 
     public String getAddress() {
@@ -404,5 +444,11 @@ public class MenuViewController {
 
     public boolean isSendRequestCheckBoxChecked() {
         return pinRequestCheckBox.isSelected();
+    }
+
+    @Override
+    public void serverDisconnected() {
+        disconnect();
+        Platform.runLater(() -> alerts.createWarningAlert(null, "Server not available. Client disconnected."));
     }
 }

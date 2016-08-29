@@ -11,7 +11,7 @@ public class Validations {
 
     private final static int MIN_IP_ADDRESS_NUMBER = 0;
     private final static int MAX_IP_ADDRESS_NUMBER = 255;
-    private final static int MIN_THREAD_SLEEP_TIME = 100;
+    private final static int MIN_THREAD_SLEEP_TIME = 10;
     private final static int MAX_THREAD_SLEEP_TIME = 10000;
     private final static int GPIO_CONTENT_LENGTH = 3;
     private final static int GPIO_VALUE_POSITION = 2;
@@ -31,7 +31,7 @@ public class Validations {
 
     private Logger logger;
 
-    public Validations(Logger logger){
+    public Validations(Logger logger) {
         this.logger = logger;
     }
 
@@ -77,21 +77,27 @@ public class Validations {
     }
 
     private boolean isMacroAreaValid(String input) {
+        // input: Whole String from text area including newlines ("\n").
         if (input == null || input.isEmpty()) {
             return false;
         }
         for (String line : input.split("\\n")) {
             boolean validLine = false;
+            // line - one text area line that should end with MACRO_LINE_END
             if (line == null || line.isEmpty() || !line.endsWith(MACRO_LINE_END)) {
                 return false;
             }
+            // lineWithoutSemicolon - line without MACRO_LINE_END
             String lineWithoutSemicolon = line.substring(0, line.lastIndexOf(MACRO_LINE_END));
             if (line.startsWith(GPIO_STRING + COMMAND_SPLITTER) || line.startsWith(SPI_STRING + COMMAND_SPLITTER) || line.startsWith(I2C_STRING + COMMAND_SPLITTER)) {
+                // splitting line by COMMAND_SPLITTER
                 String[] token = lineWithoutSemicolon.split(COMMAND_SPLITTER);
                 if (token.length <= 1 || token[1].isEmpty()) {
                     return false;
                 }
+                //command - everything before COMMAND_SPLITTER (e.g I2C)
                 String command = token[0];
+                // content - everything after COMMAND_SPLITTER
                 String content = token[1];
                 if (!content.isEmpty() && I2C_STRING.equals(command) && isMacroHexaCommandValid(content)) {
                     validLine = true;
@@ -99,10 +105,13 @@ public class Validations {
                 if (!content.isEmpty() && SPI_STRING.equals(command) && isMacroHexaCommandValid(content)) {
                     validLine = true;
                 }
-                if (GPIO_STRING.equals(command) && content.length() == GPIO_CONTENT_LENGTH && isOnlyDigitString(content)) {
+                boolean isLengthOk = content.length() == GPIO_CONTENT_LENGTH;
+                boolean pinNumberIsNotZero = !"00".equals(content.substring(0, 2));
+                if (GPIO_STRING.equals(command) && isLengthOk && pinNumberIsNotZero && isOnlyDigitString(content)) {
                     String valueToSend = String.valueOf(content.charAt(GPIO_VALUE_POSITION));
                     validLine = valueToSend.equals(GPIO_OFF_VALUE) || valueToSend.equals(GPIO_ON_VALUE);
                 }
+                // Thread sleep command
             } else if (isOnlyDigitString(lineWithoutSemicolon) && line.endsWith(MACRO_LINE_END)) {
                 int contentValue = Integer.valueOf(lineWithoutSemicolon);
                 validLine = contentValue >= MIN_THREAD_SLEEP_TIME && contentValue <= MAX_THREAD_SLEEP_TIME;
@@ -131,7 +140,8 @@ public class Validations {
     }
 
     public boolean isMacroHexaCommandValid(String input) {
-        return isOnlyDigitString(input.substring(0, 2)) && isHexaStringValid(input.substring(2));
+        boolean pinNumberIsNotZero = !"00".equals(input.substring(2, 4));
+        return isPhysicalAddressValid(input.substring(0, 2)) && isOnlyDigitString(input.substring(2, 4)) && pinNumberIsNotZero && isHexaStringValid(input.substring(4));
     }
 
     public boolean isHexaStringValid(String input) {
@@ -139,7 +149,7 @@ public class Validations {
     }
 
     public boolean isPhysicalAddressValid(String input) {
-        return isSingleHexaString(input) && input.length() == 2;
+        return isHexaNumberSevenBit(input) && isSingleHexaString(input) && input.length() == 2;
     }
 
     public void setTextAreaValidationBorder(TextArea textarea, int item) {
@@ -177,6 +187,15 @@ public class Validations {
             }
         } else {
             textField.setStyle(RED_BORDER);
+            return false;
+        }
+    }
+
+    private boolean isHexaNumberSevenBit(String input) {
+        try {
+            Byte b = Byte.decode("0x" + input);
+            return b <= 127 && b >= 0;
+        } catch (NumberFormatException e) {
             return false;
         }
     }

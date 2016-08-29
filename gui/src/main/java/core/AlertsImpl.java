@@ -4,6 +4,7 @@ import javafx.scene.control.Alert;
 
 public class AlertsImpl implements Alerts {
 
+    @Override
     public void createErrorAlert(String header, String content) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
         alert.setTitle("Error");
@@ -12,6 +13,7 @@ public class AlertsImpl implements Alerts {
         alert.showAndWait();
     }
 
+    @Override
     public void createInfoAlert(String header, String content) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("Information");
@@ -20,6 +22,7 @@ public class AlertsImpl implements Alerts {
         alert.showAndWait();
     }
 
+    @Override
     public void createWarningAlert(String header, String content) {
         Alert alert = new Alert(Alert.AlertType.WARNING);
         alert.setTitle("Warning");
@@ -28,6 +31,7 @@ public class AlertsImpl implements Alerts {
         alert.showAndWait();
     }
 
+    @Override
     public Alert createConfirmationAlert(String header, String content) {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle("Confirmation");

@@ -33,12 +33,14 @@ public class HelpDialog {
             stage.initModality(Modality.WINDOW_MODAL);
             stage.setScene(new Scene(view));
             stage.initOwner(((Node)event.getSource()).getScene().getWindow());
-            stage.show();
 
             HelpDialogController controller = loader.getController();
             controller.setDialogParent(this);
+            controller.setButtonStyle();
+
+            stage.show();
         } catch (IOException e) {
-            logger.log(e.toString());
+            logger.log("Cannot load dialog.");
         }
     }
 

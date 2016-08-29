@@ -56,9 +56,9 @@
         </HBox>
         <ComboBox fx:id="textAreaComboBox" prefWidth="240" onHidden="#validateTextArea"/>
         <StackPane prefHeight="5"/>
-        <TextField fx:id="addressTextField" promptText="Physical address (without 0x)" prefWidth="240" onKeyReleased="#validatePhysicalAddress"/>
+        <TextField fx:id="addressTextField" promptText="Physical address (without 0x)" prefWidth="240" onKeyReleased="#validatePhysicalAddress" disable="true"/>
         <StackPane prefHeight="1"/>
-        <TextArea fx:id="messagesTextArea" prefRowCount="12" prefWidth="240" onKeyReleased="#validateTextArea"/>
+        <TextArea fx:id="messagesTextArea" prefRowCount="12" prefWidth="240" onKeyReleased="#validateTextArea" disable="true"/>
         <Button fx:id="sendButton" text="Send" onAction="#sendTextAreaMessage" disable="true"/>
     </VBox>
     <StackPane prefWidth="15"/>

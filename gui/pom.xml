@@ -7,7 +7,10 @@
     <groupId>com.kastenoriginal</groupId>
     <artifactId>embedded-gui</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <packaging>jar</packaging>
+    <modules>
+        <module>../agent</module>
+    </modules>
+    <packaging>pom</packaging>
     <name>Embedded GUI</name>
 
     <dependencies>
@@ -15,6 +18,11 @@
             <groupId>org.controlsfx</groupId>
             <artifactId>controlsfx</artifactId>
             <version>8.40.10</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jetbrains</groupId>
+            <artifactId>annotations</artifactId>
+            <version>RELEASE</version>
         </dependency>
     </dependencies>
 
@@ -32,7 +40,7 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <mainClass>core.Root</mainClass>
+                    <mainClass>core.Main</mainClass>
                 </configuration>
             </plugin>
             <plugin>

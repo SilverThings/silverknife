@@ -4,18 +4,17 @@ import controllers.MenuViewController;
 import core.networking.Networking;
 import javafx.application.Application;
 import javafx.application.Platform;
-import javafx.event.EventHandler;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
 import javafx.scene.control.TextArea;
+import javafx.scene.image.Image;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
-import javafx.stage.WindowEvent;
 import layouts.BeagleBoneLayout;
 import layouts.CubieBoardLayout;
 import layouts.EmbeddedLayout;
@@ -30,6 +29,7 @@ public class Root extends Application {
 
     static final String CSS_FILE = Root.class.getClassLoader().getResource("Style.css").toExternalForm();
     private final static String APPLICATION_TITLE = "Embedded GUI";
+    private static final String APPLICATION_IMAGE = "/embedded_icon.png";
     private final static URL ROOT_VIEW = Root.class.getResource("/rootView.fxml");
     private final static URL MENU_VIEW = Root.class.getResource("/menuView.fxml");
     private final static URL LOG_VIEW = Root.class.getResource("/logView.fxml");
@@ -42,11 +42,11 @@ public class Root extends Application {
     private final static String ROOT_INITIALIZATION_FAILED = "Root layout initialization failed";
     private final static String MENU_INITIALIZATION_FAILED = "Menu layout initialization failed";
     private final static String LOG_INITIALIZATION_FAILED = "Log layout initialization failed";
-    private final static String FXML_FILE_NOT_FOUND = "Cannot load .fxml file for appropriate layout";
+    private final static String FXML_FILE_NOT_FOUND = "Cannot load layout file.";
     private final static String LAYOUT_UNKNOWN = "Unknown layout.";
     private final static String CANNOT_SEND_MACRO = "Cannot send macro. Please send macro with appropriate button.";
-    private final static String CANNOT_SEND_I2C = "Cannot send I2C message. Please choose I2C option to send valid I2C message";
-    private final static String CANNOT_SEND_SPI = "Cannot send SPI message. Please choose SPI option to send valid SPI message";
+    private final static String CANNOT_SEND_I2C = "Cannot send I2C message. Click on appropriate I2C button to send valid I2C message";
+    private final static String CANNOT_SEND_SPI = "Cannot send SPI message. Click on appropriate SPI button to send valid SPI message";
     private static final String MESSAGE_SEND_FAILED = "Failed to send message";
 
     private Networking networking;
@@ -68,6 +68,7 @@ public class Root extends Application {
     public void start(Stage primaryStage) {
         this.primaryStage = primaryStage;
         this.primaryStage.setTitle(APPLICATION_TITLE);
+        this.primaryStage.getIcons().add(new Image(APPLICATION_IMAGE));
 
         networking = new Networking();
 
@@ -95,18 +96,15 @@ public class Root extends Application {
             primaryStage.setHeight(primaryScreenBounds.getHeight());
 
             primaryStage.setScene(scene);
-            primaryStage.setMaximized(true);
+//            primaryStage.setMaximized(true);
             primaryStage.setResizable(false);
 
             primaryStage.show();
 
-            primaryStage.setOnCloseRequest(new EventHandler<WindowEvent>() {
-                @Override
-                public void handle(WindowEvent event) {
-                    networking.disconnect();
-                    Platform.exit();
-                    System.exit(0);
-                }
+            primaryStage.setOnCloseRequest(event -> {
+                networking.disconnect();
+                Platform.exit();
+                System.exit(0);
             });
         } catch (IOException e) {
             throw new RuntimeException(ROOT_INITIALIZATION_FAILED, e);
@@ -196,7 +194,7 @@ public class Root extends Application {
         }
     }
 
-    public void handlePinButtonClick(Pin pin) {
+    public void handlePinButtonClick(Pin pin, boolean toggle) {
         String selectedCommandMode = menuViewController.getCommandMode();
         String pinType = pin.getPinType();
 
@@ -225,17 +223,14 @@ public class Root extends Application {
             switch (selectedCommandMode) {
                 case MenuViewController.OBSERVABLE_I2C_TEXT:
                     if (validations.isHexaStringValid(command) && validations.isPhysicalAddressValid(address)) {
-                        logger.log("I2C message akoze sent na pin: " + pin + " with address: " + address + " and command: " + command);
-                        // TODO: 18.8.2016 NETWORK_OP
-//                    networking.sendValueToI2CPin(pin, address, command);
+                        networking.sendValueToI2CPin(menuViewController, pin, address, command);
+                    } else {
+                        logger.log(MESSAGE_SEND_FAILED + ": Invalid input.");
                     }
                     return;
-                // TODO: 17.8.2016 ak chcem odpoved od networkingu treba dat parameter to metody this a v metode to bude callback
                 case MenuViewController.OBSERVABLE_SPI_TEXT:
                     if (validations.isHexaStringValid(command) && validations.isPhysicalAddressValid(address)) {
-                        logger.log("SPI message akoze sent na pin: " + pin + " with address: " + address + " and command: " + command);
-                        // TODO: 18.8.2016 NETWORK_OP
-//                    networking.sendValueToSpiPin(pin, address, command);
+                        networking.sendValueToSpiPin(menuViewController, pin, address, command);
                     }
                     return;
                 default:
@@ -243,15 +238,14 @@ public class Root extends Application {
                     break;
             }
         } else {
-            // TODO: 18.8.2016 NETWORK_OP
-//            networking.toggleGpioPin(pin);
+            networking.toggleGpioPin(menuViewController, getRequestStatusCallback(), pin, toggle);
             logger.log("Pin " + pin.getPinId() + " sent.");
         }
     }
 
     public void handleCheckBoxClick(ArrayList<Pin> pins) {
         if (menuViewController.isSendRequestCheckBoxChecked()) {
-            networking.updatePinsInRequestStatus(layout, pins);
+            networking.updatePinsInRequestStatus(menuViewController, layout, pins);
         }
     }
 

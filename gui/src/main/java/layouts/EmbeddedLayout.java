@@ -8,5 +8,5 @@ public interface EmbeddedLayout {
 
     List<Pin> getCheckedPins();
 
-    void updatePinsStatus(List<Pin> pins);
+    void setColorOnPins(List<Pin> pins);
 }

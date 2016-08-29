@@ -5,8 +5,6 @@ import core.Logger;
 import core.Pin;
 import core.Root;
 import core.hashmaps.RaspberryHashMap;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -32,8 +30,10 @@ public class RaspberryLayout implements EmbeddedLayout {
     private final static int ELEMENTS_COUNT = PIN_COUNT * ELEMENTS_FOR_ROW_COUNT;
     private final static String GPIO_OUTPUT = "OUT";
     private final static String GPIO_INPUT = "IN";
-    private static final String BUTTON_FONT_SIZE = "-fx-font-size: 12";
     private static final String LAYOUT_CREATION_FAILED = "Creation of layout failed.";
+    private static final String BUTTON_COLOR_RED = "-fx-background-color: #ff9999;-fx-text-fill: black;-fx-font-size: 9pt;";
+    private static final String BUTTON_COLOR_GREEN = "-fx-background-color: #99ff99;-fx-text-fill: black;-fx-font-size: 9pt;";
+    private static final String DEFAULT_BUTTON_STYLE = "/Style.css";
 
     private Root root;
     private Logger logger;
@@ -127,27 +127,28 @@ public class RaspberryLayout implements EmbeddedLayout {
     private void addCheckBoxToLayout() {
         final CheckBox checkBox = new CheckBox();
         checkBox.setId(String.valueOf(checkBoxId));
-        checkBox.selectedProperty().addListener(new ChangeListener<Boolean>() {
-            public void changed(ObservableValue observableValue, Boolean oldValue, Boolean newValue) {
-                int checkBoxId = Integer.valueOf(checkBox.getId()) - 1;
+        checkBox.selectedProperty().addListener((observableValue, oldValue, newValue) -> {
+            int checkBoxId = Integer.valueOf(checkBox.getId()) - 1;
 
-                toggleElementsEnabled(newValue, checkBoxId);
+            buttons.get(checkBoxId).setStyle(DEFAULT_BUTTON_STYLE);
+            buttons.get(checkBoxId).setStyle("-fx-font-size: 9pt");
 
-                String buttonText = buttons.get(checkBoxId).getText().trim();
-                String ioType = inputOutputComboBoxes.get(checkBoxId).getSelectionModel().getSelectedItem();
-                String pinType = pinTypeComboBoxes.get(checkBoxId).getSelectionModel().getSelectedItem();
+            toggleElementsEnabled(newValue, checkBoxId);
 
-                Pin pin = new Pin(Integer.valueOf(buttonText), ioType, pinType);
+            String buttonText = buttons.get(checkBoxId).getText().trim();
+            String ioType = inputOutputComboBoxes.get(checkBoxId).getSelectionModel().getSelectedItem();
+            String pinType = pinTypeComboBoxes.get(checkBoxId).getSelectionModel().getSelectedItem();
 
-                if (newValue) {
-                    addPin(pin);
-                } else {
-                    removePin(pin);
-                }
+            Pin pin = new Pin(Integer.valueOf(buttonText), ioType, pinType);
 
-                if (pins != null || !pins.isEmpty()) {
-                    root.handleCheckBoxClick(pins);
-                }
+            if (newValue) {
+                addPin(pin);
+            } else {
+                removePin(pin);
+            }
+
+            if (pins != null || !pins.isEmpty()) {
+                root.handleCheckBoxClick(pins);
             }
         });
         checkBoxes.add(checkBox);
@@ -163,16 +164,21 @@ public class RaspberryLayout implements EmbeddedLayout {
         inputOutputComboBox.getSelectionModel().selectFirst();
         inputOutputComboBoxes.add(inputOutputComboBox);
         inputOutputComboBoxId++;
-        inputOutputComboBox.setOnAction(new EventHandler<ActionEvent>() {
-            public void handle(ActionEvent arg0) {
-                Object currentlySelectedItem = inputOutputComboBox.getSelectionModel().getSelectedItem();
-                int inputOutputComboBoxId = Integer.valueOf(inputOutputComboBox.getId()) - 1;
+        inputOutputComboBox.setOnAction(arg0 -> {
+            String currentlySelectedItem = inputOutputComboBox.getSelectionModel().getSelectedItem();
+            int inputOutputComboBoxId = Integer.valueOf(inputOutputComboBox.getId()) - 1;
 
-                if (GPIO_INPUT.equals(currentlySelectedItem)) {
-                    buttons.get(inputOutputComboBoxId).setDisable(true);
-                } else {
-                    buttons.get(inputOutputComboBoxId).setDisable(false);
-                }
+            if (GPIO_INPUT.equals(currentlySelectedItem)) {
+                buttons.get(inputOutputComboBoxId).setDisable(true);
+                int pinId = Integer.valueOf(buttons.get(inputOutputComboBoxId).getText().trim());
+                Pin turnOffOutputPin = new Pin(pinId, GPIO_OUTPUT, Pin.GPIO);
+                turnOffOutputPin.setValue(false);
+                root.handlePinButtonClick(turnOffOutputPin, false);
+
+                Pin getInputPin = new Pin(pinId, GPIO_INPUT, Pin.GPIO);
+                root.handlePinButtonClick(getInputPin, true);
+            } else {
+                buttons.get(inputOutputComboBoxId).setDisable(false);
             }
         });
         gridPane.add(inputOutputComboBox, column, row);
@@ -185,15 +191,13 @@ public class RaspberryLayout implements EmbeddedLayout {
         pinTypeComboBox.getSelectionModel().selectFirst();
         pinTypeComboBoxes.add(pinTypeComboBox);
         pinTypeComboBoxId++;
-        EventHandler<ActionEvent> eventHandler = new EventHandler<ActionEvent>() {
-            public void handle(ActionEvent arg0) {
-                int pinTypeComboBoxId = Integer.valueOf(pinTypeComboBox.getId()) - 1;
-                ComboBox<String> currentRowComboBox = inputOutputComboBoxes.get(pinTypeComboBoxId);
-                Button currentRowButton = buttons.get(pinTypeComboBoxId);
-                CheckBox currentRowCheckBox = checkBoxes.get(pinTypeComboBoxId);
-                setElementsVisibility(pinTypeComboBox.getSelectionModel().getSelectedItem(), currentRowComboBox, currentRowButton, currentRowCheckBox.isSelected());
-                synchronizeI2cElements(pinTypeComboBox);
-            }
+        EventHandler<ActionEvent> eventHandler = arg0 -> {
+            int pinTypeComboBoxId1 = Integer.valueOf(pinTypeComboBox.getId()) - 1;
+            ComboBox<String> currentRowComboBox = inputOutputComboBoxes.get(pinTypeComboBoxId1);
+            Button currentRowButton = buttons.get(pinTypeComboBoxId1);
+            CheckBox currentRowCheckBox = checkBoxes.get(pinTypeComboBoxId1);
+            setElementsVisibility(pinTypeComboBox.getSelectionModel().getSelectedItem(), currentRowComboBox, currentRowButton, currentRowCheckBox.isSelected());
+            synchronizePinElements(pinTypeComboBox);
         };
         pinTypeComboBox.setOnAction(eventHandler);
         gridPane.add(pinTypeComboBox, column, row);
@@ -202,23 +206,21 @@ public class RaspberryLayout implements EmbeddedLayout {
     private void addButtonToLayout() {
         final Button button = new Button();
         button.setId(String.valueOf(buttonId));
+        button.setStyle("-fx-font-size: 9pt;");
         button.setUserData('0');
-        button.setStyle(BUTTON_FONT_SIZE);
         button.setMinSize(BUTTON_MIN_SIZE_WIDTH, BUTTON_MIN_SIZE_HEIGHT);
         button.setText(String.valueOf(buttonId));
         buttons.add(button);
         buttonId++;
-        button.setOnAction(new EventHandler<ActionEvent>() {
-            public void handle(ActionEvent arg0) {
-                int buttonId = Integer.valueOf(button.getId()) - 1;
+        button.setOnAction(arg0 -> {
+            int buttonId1 = Integer.valueOf(button.getId()) - 1;
 
-                String buttonText = button.getText().trim();
-                String pinType = pinTypeComboBoxes.get(buttonId).getSelectionModel().getSelectedItem();
-                String ioType = inputOutputComboBoxes.get(buttonId).getSelectionModel().getSelectedItem();
+            String buttonText = button.getText().trim();
+            String pinType = pinTypeComboBoxes.get(buttonId1).getSelectionModel().getSelectedItem();
+            String ioType = inputOutputComboBoxes.get(buttonId1).getSelectionModel().getSelectedItem();
 
-                Pin pin = new Pin(Integer.valueOf(buttonText), ioType, pinType);
-                root.handlePinButtonClick(pin);
-            }
+            Pin pin = new Pin(Integer.valueOf(buttonText), ioType, pinType);
+            root.handlePinButtonClick(pin, true);
         });
         gridPane.add(button, column, row);
     }
@@ -235,27 +237,45 @@ public class RaspberryLayout implements EmbeddedLayout {
     }
 
     private void enableRowElements(int checkBoxId) {
+        ComboBox currentPinTypeComboBox = pinTypeComboBoxes.get(checkBoxId);
+        currentPinTypeComboBox.setDisable(false);
         inputOutputComboBoxes.get(checkBoxId).setDisable(false);
-        pinTypeComboBoxes.get(checkBoxId).setDisable(false);
         buttons.get(checkBoxId).setDisable(false);
-        for (ComboBox<String> comboBox : pinTypeComboBoxes) {
-            String currentComboBoxSelectedItem = comboBox.getSelectionModel().getSelectedItem();
-
-            if (Pin.I2C.equals(currentComboBoxSelectedItem)) {
-                int comboBoxId = Integer.valueOf(comboBox.getId()) - 1;
-                checkBoxes.get(comboBoxId).setSelected(true);
+        if (Pin.I2C.equals(currentPinTypeComboBox.getSelectionModel().getSelectedItem())) {
+            for (ComboBox<String> pinTypeComboBox : pinTypeComboBoxes) {
+                if (Pin.I2C.equals(pinTypeComboBox.getSelectionModel().getSelectedItem())) {
+                    int comboBoxId = Integer.valueOf(pinTypeComboBox.getId()) - 1;
+                    checkBoxes.get(comboBoxId).setSelected(true);
+                }
+            }
+        } else if (Pin.SPI.equals(currentPinTypeComboBox.getSelectionModel().getSelectedItem())) {
+            for (ComboBox<String> pinTypeComboBox : pinTypeComboBoxes) {
+                if (Pin.SPI.equals(pinTypeComboBox.getSelectionModel().getSelectedItem())) {
+                    int comboBoxId = Integer.valueOf(pinTypeComboBox.getId()) - 1;
+                    checkBoxes.get(comboBoxId).setSelected(true);
+                }
             }
         }
     }
 
     private void disableRowElements(int checkBoxId) {
+        ComboBox currentPinTypeComboBox = pinTypeComboBoxes.get(checkBoxId);
         inputOutputComboBoxes.get(checkBoxId).setDisable(true);
-        pinTypeComboBoxes.get(checkBoxId).setDisable(true);
+        currentPinTypeComboBox.setDisable(true);
         buttons.get(checkBoxId).setDisable(true);
-        for (ComboBox<String> comboBox : pinTypeComboBoxes) {
-            if (Pin.I2C.equals(comboBox.getSelectionModel().getSelectedItem())) {
-                int comboBoxId = Integer.valueOf(comboBox.getId()) - 1;
-                checkBoxes.get(comboBoxId).setSelected(false);
+        if (Pin.I2C.equals(currentPinTypeComboBox.getSelectionModel().getSelectedItem())) {
+            for (ComboBox<String> pinTypeComboBox : pinTypeComboBoxes) {
+                if (Pin.I2C.equals(pinTypeComboBox.getSelectionModel().getSelectedItem())) {
+                    int comboBoxId = Integer.valueOf(pinTypeComboBox.getId()) - 1;
+                    checkBoxes.get(comboBoxId).setSelected(false);
+                }
+            }
+        } else if (Pin.SPI.equals(currentPinTypeComboBox.getSelectionModel().getSelectedItem())) {
+            for (ComboBox<String> pinTypeComboBox : pinTypeComboBoxes) {
+                if (Pin.SPI.equals(pinTypeComboBox.getSelectionModel().getSelectedItem())) {
+                    int comboBoxId = Integer.valueOf(pinTypeComboBox.getId()) - 1;
+                    checkBoxes.get(comboBoxId).setSelected(false);
+                }
             }
         }
     }
@@ -287,7 +307,7 @@ public class RaspberryLayout implements EmbeddedLayout {
         }
     }
 
-    private void synchronizeI2cElements(ComboBox<String> pinTypeComboBox) {
+    private void synchronizePinElements(ComboBox<String> pinTypeComboBox) {
         String pinTypeSelectedItem = pinTypeComboBox.getSelectionModel().getSelectedItem();
         if (Pin.I2C.equals(pinTypeSelectedItem)) {
             for (ComboBox<String> comboBox : pinTypeComboBoxes) {
@@ -296,10 +316,26 @@ public class RaspberryLayout implements EmbeddedLayout {
                     checkBoxes.get(Integer.valueOf(comboBox.getId()) - 1).setSelected(true);
                 }
             }
-        } else if (Pin.GPIO.equals(pinTypeSelectedItem) && pinTypeComboBox.getItems().contains(Pin.I2C)) {
+        } else if (Pin.SPI.equals(pinTypeSelectedItem) && pinTypeComboBox.getItems().contains(Pin.SPI)) {
             for (ComboBox<String> comboBox : pinTypeComboBoxes) {
-                if (comboBox.getItems().contains(Pin.I2C)) {
-                    comboBox.getSelectionModel().select(Pin.GPIO);
+                if (comboBox.getItems().contains(Pin.SPI)) {
+                    comboBox.getSelectionModel().select(Pin.SPI);
+                    checkBoxes.get(Integer.valueOf(comboBox.getId()) - 1).setSelected(true);
+                }
+            }
+        } else if (Pin.GPIO.equals(pinTypeSelectedItem)) {
+            if (pinTypeComboBox.getItems().contains(Pin.I2C)) {
+                for (ComboBox<String> comboBox : pinTypeComboBoxes) {
+                    if (comboBox.getItems().contains(Pin.I2C)) {
+                        comboBox.getSelectionModel().select(Pin.GPIO);
+                    }
+                }
+            }
+            if (pinTypeComboBox.getItems().contains(Pin.SPI)) {
+                for (ComboBox<String> comboBox : pinTypeComboBoxes) {
+                    if (comboBox.getItems().contains(Pin.SPI)) {
+                        comboBox.getSelectionModel().select(Pin.GPIO);
+                    }
                 }
             }
         }
@@ -326,22 +362,14 @@ public class RaspberryLayout implements EmbeddedLayout {
     }
 
     @Override
-    public void updatePinsStatus(List<Pin> pins) {
-
-        String colorRed = "-fx-background-color: #ff9999;-fx-text-fill: black;";
-        String colorGreen = "-fx-background-color: #99ff99;-fx-text-fill: black;";
-
-        String randomColor = Math.random() > 0.5 ? colorRed : colorGreen;
-
-        // TODO: 19.8.2016 kuknut eclipse metodu setUiFromResponse a podla toho co pride zo servera poriesit metodu ify atd...
+    public void setColorOnPins(List<Pin> pins) {
         for (Pin pin : pins) {
             int pinId = pin.getPinId() - 1;
-            if (pin.isValue()) {
-                buttons.get(pinId).setStyle(randomColor);
+            if (pin.isValuePositive()) {
+                buttons.get(pinId).setStyle(BUTTON_COLOR_GREEN);
             } else {
-                buttons.get(pinId).setStyle(randomColor);
+                buttons.get(pinId).setStyle(BUTTON_COLOR_RED);
             }
-
         }
     }
 }
